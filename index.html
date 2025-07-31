@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANDROIDE VIRTUAL - Sistema de IA Avançada</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2300ffff'/><text x='50' y='60' text-anchor='middle' font-size='35' fill='%23000'>AI</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+    <div class="viewport-container" id="mainInterface" style="display: none;">
+        <!-- Renderizador 3D Principal -->
+        <div class="main-display">
+            <div id="threejs-container"></div>
+            
+            <!-- Overlay de Interface -->
+            <div class="ui-overlay">
+                <!-- HUD Superior -->
+                <div class="top-hud">
+                    <div class="system-status">
+                        <div class="status-line">
+                            <span class="label">SISTEMA:</span>
+                            <span class="value" id="systemStatus">ATIVO</span>
+                        </div>
+                        <div class="status-line">
+                            <span class="label">MODELO:</span>
+                            <span class="value">GEMINI-ANDROIDE-V2</span>
+                        </div>
+                        <div class="status-line">
+                            <span class="label">RESPOSTA:</span>
+                            <span class="value" id="responseTime">12ms</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Indicadores de Estado -->
+                    <div class="state-indicators">
+                        <div class="indicator listening" id="listeningIndicator">
+                            <div class="icon">👂</div>
+                            <div class="label">ESCUTANDO</div>
+                        </div>
+                        <div class="indicator thinking" id="thinkingIndicator">
+                            <div class="icon">🧠</div>
+                            <div class="label">PROCESSANDO</div>
+                        </div>
+                        <div class="indicator speaking" id="speakingIndicator">
+                            <div class="icon">💬</div>
+                            <div class="label">RESPONDENDO</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controles Centrais -->
+                <div class="center-controls">
+                    <div class="expression-controls">
+                        <button class="expr-btn" data-emotion="neutral">😐</button>
+                        <button class="expr-btn" data-emotion="happy">😊</button>
+                        <button class="expr-btn" data-emotion="surprised">😲</button>
+                        <button class="expr-btn" data-emotion="sad">😢</button>
+                        <button class="expr-btn" data-emotion="angry">😠</button>
+                        <button class="expr-btn" data-emotion="thinking">🤔</button>
+                    </div>
+                </div>
+                
+                <!-- HUD Inferior -->
+                <div class="bottom-hud">
+                    <!-- Visualizador de Áudio Avançado -->
+                    <div class="audio-spectrum" id="audioSpectrum">
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                        <div class="spectrum-bar"></div>
+                    </div>
+                    
+                    <!-- Controles Principais -->
+                    <div class="main-controls">
+                        <button id="startBtn" class="control-button start">
+                            <div class="btn-content">
+                                <div class="btn-icon">▶</div>
+                                <div class="btn-label">ATIVAR IA</div>
+                            </div>
+                        </button>
+                        
+                        <button id="stopBtn" class="control-button stop" disabled>
+                            <div class="btn-content">
+                                <div class="btn-icon">⏹</div>
+                                <div class="btn-label">DESATIVAR</div>
+                            </div>
+                        </button>
+                        
+                        <button id="resetBtn" class="control-button reset">
+                            <div class="btn-content">
+                                <div class="btn-icon">🔄</div>
+                                <div class="btn-label">RESET</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Painel Lateral de Dados -->
+        <div class="side-panel">
+            <div class="panel-header">
+                <h3>LOGS DO SISTEMA</h3>
+                <div class="panel-controls">
+                    <div class="panel-btn minimize">−</div>
+                    <div class="panel-btn close">×</div>
+                </div>
+            </div>
+            
+            <div class="conversation-log" id="conversationLog">
+                <div class="log-entry system">
+                    <span class="timestamp">[00:00:00]</span>
+                    <span class="type">[SISTEMA]</span>
+                    <span class="message">Androide virtual inicializado com sucesso</span>
+                </div>
+                <div class="log-entry system">
+                    <span class="timestamp">[00:00:01]</span>
+                    <span class="type">[MODELO]</span>
+                    <span class="message">Carregando geometria facial 3D...</span>
+                </div>
+                <div class="log-entry system">
+                    <span class="timestamp">[00:00:02]</span>
+                    <span class="type">[NEURAL]</span>
+                    <span class="message">Rede neural ativada. Pronto para interação.</span>
+                </div>
+            </div>
+            
+            <!-- Parâmetros do Modelo -->
+            <div class="model-params">
+                <h4>PARÂMETROS FACIAIS</h4>
+                <div class="param-group">
+                    <label>Expressão Facial:</label>
+                    <div class="param-value" id="currentExpression">NEUTRO</div>
+                </div>
+                <div class="param-group">
+                    <label>Posição Ocular:</label>
+                    <div class="param-value" id="eyePosition">0.0, 0.0</div>
+                </div>
+                <div class="param-group">
+                    <label>Abertura da Boca:</label>
+                    <div class="param-value" id="mouthOpening">0%</div>
+                </div>
+                <div class="param-group">
+                    <label>Intensidade Emocional:</label>
+                    <div class="param-value" id="emotionIntensity">50%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Advanced Splash Screen -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-background">
+            <div class="neural-grid"></div>
+            <div class="floating-particles"></div>
+        </div>
+        
+        <div class="splash-content">
+            <!-- Main Logo -->
+            <div class="main-logo">
+                <div class="logo-outer-ring">
+                    <div class="logo-inner-ring">
+                        <div class="logo-core">
+                            <span class="logo-text">AI</span>
+                            <div class="logo-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Title and Subtitle -->
+            <div class="splash-title">
+                <h1 class="main-title">ANDROIDE VIRTUAL</h1>
+                <h2 class="sub-title">Sistema de Inteligência Artificial Avançada</h2>
+                <div class="version-info">v2.1.0 - GEMINI POWERED</div>
+            </div>
+            
+            <!-- Loading Progress -->
+            <div class="loading-section">
+                <div class="loading-text" id="splashLoadingText">INICIALIZANDO SISTEMAS...</div>
+                <div class="progress-container">
+                    <div class="progress-track">
+                        <div class="progress-fill" id="splashProgressBar"></div>
+                        <div class="progress-glow"></div>
+                    </div>
+                    <div class="progress-percentage" id="progressPercentage">0%</div>
+                </div>
+                <div class="system-checks" id="systemChecks">
+                    <div class="check-item" data-check="neural">🧠 Rede Neural</div>
+                    <div class="check-item" data-check="voice">🎤 Reconhecimento de Voz</div>
+                    <div class="check-item" data-check="synthesis">🔊 Síntese de Voz</div>
+                    <div class="check-item" data-check="api">🌐 API Conexão</div>
+                    <div class="check-item" data-check="models">🤖 Modelos 3D</div>
+                </div>
+            </div>
+            
+            <!-- Start Button -->
+            <button id="enterSystemBtn" class="enter-btn" style="display: none;">
+                <span class="btn-text">ENTRAR NO SISTEMA</span>
+                <div class="btn-glow"></div>
+            </button>
+        </div>
+        
+        <!-- Tech Specs -->
+        <div class="tech-specs">
+            <div class="spec-item">
+                <span class="spec-label">MODELO:</span>
+                <span class="spec-value">GEMINI-1.5-FLASH</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">LINGUAGEM:</span>
+                <span class="spec-value">PORTUGUÊS BR</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">STATUS:</span>
+                <span class="spec-value" id="systemStatus">CARREGANDO...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Screen (Simplified) -->
+    <div id="loadingScreen" class="loading-screen" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <div class="logo-ring"></div>
+                <div class="logo-core">AI</div>
+            </div>
+            <div class="loading-text">PROCESSANDO...</div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="loading-status" id="loadingStatus">Aguarde...</div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+
