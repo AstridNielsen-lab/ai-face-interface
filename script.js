@@ -876,11 +876,128 @@ class UltraRealisticAndroidAI {
     }
 }
 
-// Inicializar a interface quando a página carregar
+// Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    const aiInterface = new UltraRealisticAndroidAI();
-    
-    // Tornar disponível globalmente para debug
-    window.aiInterface = aiInterface;
+    // Inicializar sequência do splash screen
+    initializeSplashScreen();
 });
+
+// Função para gerenciar o splash screen
+function initializeSplashScreen() {
+    const splashScreen = document.getElementById('splashScreen');
+    const mainInterface = document.getElementById('mainInterface');
+    const enterSystemBtn = document.getElementById('enterSystemBtn');
+    const progressBar = document.getElementById('splashProgressBar');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const loadingText = document.getElementById('splashLoadingText');
+    const systemChecks = document.getElementById('systemChecks');
+    const systemStatusEl = document.querySelector('.tech-specs .spec-value');
+    
+    let progress = 0;
+    let currentStep = 0;
+    
+    const loadingSteps = [
+        { text: 'INICIALIZANDO SISTEMAS...', duration: 800 },
+        { text: 'CARREGANDO REDE NEURAL...', duration: 1000 },
+        { text: 'CONFIGURANDO VOZ...', duration: 700 },
+        { text: 'CONECTANDO API...', duration: 900 },
+        { text: 'FINALIZANDO...', duration: 600 }
+    ];
+    
+    const checkItems = [
+        { selector: '[data-check="neural"]', delay: 1000 },
+        { selector: '[data-check="voice"]', delay: 1800 },
+        { selector: '[data-check="synthesis"]', delay: 2500 },
+        { selector: '[data-check="api"]', delay: 3200 },
+        { selector: '[data-check="models"]', delay: 3800 }
+    ];
+    
+    // Função para atualizar progresso
+    function updateProgress() {
+        const targetProgress = ((currentStep + 1) / loadingSteps.length) * 100;
+        
+        const progressInterval = setInterval(() => {
+            progress += 2;
+            if (progress >= targetProgress) {
+                progress = targetProgress;
+                clearInterval(progressInterval);
+                
+                if (currentStep < loadingSteps.length - 1) {
+                    currentStep++;
+                    setTimeout(() => {
+                        if (loadingText) loadingText.textContent = loadingSteps[currentStep].text;
+                        updateProgress();
+                    }, 200);
+                } else {
+                    // Carregamento completo
+                    setTimeout(showEnterButton, 500);
+                }
+            }
+            
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressPercentage) progressPercentage.textContent = Math.round(progress) + '%';
+        }, 30);
+    }
+    
+    // Função para mostrar checks do sistema
+    function activateSystemChecks() {
+        checkItems.forEach((item, index) => {
+            setTimeout(() => {
+                const element = systemChecks.querySelector(item.selector);
+                if (element) {
+                    element.style.color = '#00ff88';
+                    element.innerHTML = element.innerHTML.replace('🧠', '✅').replace('🎤', '✅').replace('🔊', '✅').replace('🌐', '✅').replace('🤖', '✅');
+                }
+            }, item.delay);
+        });
+    }
+    
+    // Função para mostrar botão de entrada
+    function showEnterButton() {
+        if (systemStatusEl) systemStatusEl.textContent = 'PRONTO';
+        if (loadingText) loadingText.textContent = 'SISTEMA PRONTO!';
+        
+        setTimeout(() => {
+            if (enterSystemBtn) {
+                enterSystemBtn.style.display = 'flex';
+                enterSystemBtn.style.opacity = '0';
+                setTimeout(() => {
+                    enterSystemBtn.style.transition = 'opacity 0.5s ease';
+                    enterSystemBtn.style.opacity = '1';
+                }, 100);
+            }
+        }, 500);
+    }
+    
+    // Event listener para o botão de entrada
+    if (enterSystemBtn) {
+        enterSystemBtn.addEventListener('click', () => {
+            // Fade out splash screen
+            splashScreen.style.transition = 'opacity 0.8s ease';
+            splashScreen.style.opacity = '0';
+            
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+                mainInterface.style.display = 'flex';
+                mainInterface.style.opacity = '0';
+                
+                setTimeout(() => {
+                    mainInterface.style.transition = 'opacity 0.8s ease';
+                    mainInterface.style.opacity = '1';
+                    
+                    // Inicializar a IA após mostrar interface
+                    setTimeout(() => {
+                        window.aiInterface = new UltraRealisticAndroidAI();
+                    }, 500);
+                }, 100);
+            }, 800);
+        });
+    }
+    
+    // Iniciar sequência de carregamento
+    setTimeout(() => {
+        updateProgress();
+        activateSystemChecks();
+    }, 1000);
+}
 
