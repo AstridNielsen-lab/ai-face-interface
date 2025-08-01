@@ -11,6 +11,7 @@
     <!-- Estilos -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/grid-layout.css">
+    <link rel="stylesheet" href="css/face-analysis.css">
     
     <!-- Three.js e Bibliotecas 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -45,6 +46,35 @@
                                 <div class="image-controls">
                                     <button class="image-btn" id="analyzeImageBtn">ANALISAR IMAGEM</button>
                                     <button class="image-btn" id="detectFeaturesBtn">DETECTAR CARACTERÍSTICAS</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Container para Olhos e Boca lado a lado -->
+                            <div class="features-container">
+                                <!-- Box Olhos -->
+                                <div class="image-display-box feature-box">
+                                    <div class="box-title">OLHOS</div>
+                                    <div class="image-container">
+                                        <img id="eyesImage" src="assets/eyes.png" alt="Olhos" class="face-image">
+                                        <div class="image-overlay">
+                                            <div class="scanning-line"></div>
+                                            <div class="detection-points"></div>
+                                        </div>
+                                    </div>
+                                    <div class="image-info" id="eyesInfo">Olhos extraídos | Status: Carregado</div>
+                                </div>
+                                
+                                <!-- Box Boca -->
+                                <div class="image-display-box feature-box">
+                                    <div class="box-title">BOCA</div>
+                                    <div class="image-container">
+                                        <img id="mouthImage" src="assets/mouth.png" alt="Boca" class="face-image">
+                                        <div class="image-overlay">
+                                            <div class="scanning-line"></div>
+                                            <div class="detection-points"></div>
+                                        </div>
+                                    </div>
+                                    <div class="image-info" id="mouthInfo">Boca extraída | Status: Carregado</div>
                                 </div>
                             </div>
                             
@@ -370,6 +400,8 @@ const emotionMask = {
     <!-- Scripts da aplicação -->
     <script src="js/face3d.js"></script>
     <script src="js/gemini-api.js"></script>
+    <script src="js/face-analysis.js"></script>
+    <script src="js/speech-driven-animation.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html>

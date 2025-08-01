@@ -304,7 +304,7 @@ class FaceAnalyzer:
         
         return normalized.tolist()
         
-def analyze_face(self, image_path: str) -> Optional[Dict]:
+    def analyze_face(self, image_path: str) -> Optional[Dict]:
         """Análise completa da face usando MediaPipe"""
         print(f"🔍 Analisando imagem: {image_path}")
         

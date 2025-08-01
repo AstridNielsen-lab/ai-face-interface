@@ -125,10 +125,10 @@
 /* Painéis laterais */
 .side-panels {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 15px;
     height: 100%;
-    overflow-y: auto;
+    overflow-x: auto;
 }
 
 .panel {

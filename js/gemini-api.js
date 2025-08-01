@@ -1,4 +1,4 @@
-// gemini-api.js - Controlador de expressões faciais via API Gemini
+// gemini-api.js - Controlador de expressões faciais via API Gemini com animação de fala
 
 class GeminiFaceController {
     constructor() {
@@ -8,9 +8,21 @@ class GeminiFaceController {
         this.currentEmotion = "neutral";
         this.isProcessing = false;
         this.faceData = null;
+        this.speechSynthesis = window.speechSynthesis;
+        this.isSpeaking = false;
         
         // Carregar dados da análise facial
         this.loadFaceAnalysis();
+        
+        // Inicializar integração com animação de fala
+        this.initSpeechAnimation();
+    }
+    
+    initSpeechAnimation() {
+        // Verificar se o SpeechDrivenAnimation está disponível
+        if (window.speechDrivenAnimation) {
+            console.log('🎵 Integração com animação de fala inicializada');
+        }
     }
     
     async loadFaceAnalysis() {

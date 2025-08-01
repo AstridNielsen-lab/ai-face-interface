@@ -1,0 +1,34 @@
+{
+  "eyes": {
+    "region": {
+      "x": 184,
+      "y": 242,
+      "width": 252,
+      "height": 49
+    },
+    "left_eye_center": [
+      233,
+      267
+    ],
+    "right_eye_center": [
+      385,
+      268
+    ]
+  },
+  "mouth": {
+    "region": {
+      "x": 233,
+      "y": 422,
+      "width": 148,
+      "height": 48
+    },
+    "center": [
+      318,
+      436
+    ]
+  },
+  "image_dimensions": {
+    "width": 617,
+    "height": 616
+  }
+}

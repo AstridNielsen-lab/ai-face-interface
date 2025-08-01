@@ -1,0 +1,382 @@
+/* Estilos para Análise Facial */
+
+/* Canvas da máscara */
+#clonedMaskCanvas {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+    border: 1px solid #00ffff;
+    border-radius: 8px;
+    box-shadow: 
+        0 0 20px rgba(0, 255, 255, 0.3),
+        inset 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+/* Overlay de processamento */
+.processing-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #00ffff;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0, 255, 255, 0.3);
+    border-top: 3px solid #00ffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Botões em estado de processamento */
+.image-btn.processing,
+.mask-btn.processing,
+.global-btn.processing {
+    position: relative;
+    overflow: hidden;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.image-btn.processing::after,
+.mask-btn.processing::after,
+.global-btn.processing::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+    animation: scanning 1.5s infinite;
+}
+
+@keyframes scanning {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Container de imagem com detecção */
+.image-container.feature-detected {
+    animation: featureDetected 2s ease-in-out;
+}
+
+/* Container para boxes de características */
+.features-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Boxes de características individuais */
+.feature-box {
+    flex: 1;
+    max-width: 48%;
+    min-width: 150px;
+}
+
+.feature-box .image-container {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    overflow: hidden;
+    position: relative;
+}
+
+.feature-box .face-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+.feature-box .box-title {
+    font-size: 11px;
+    font-weight: bold;
+    color: #00ffff;
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+@keyframes featureDetected {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.02); }
+    50% { transform: scale(1.05); }
+    75% { transform: scale(1.02); }
+}
+
+.image-container.feature-detected .image-overlay {
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+}
+
+/* Grid neural overlay */
+.neural-grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    animation: gridPulse 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes gridPulse {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.3; }
+}
+
+/* Pontos de detecção */
+.detection-points {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.detection-point {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #00ffff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00ffff;
+    animation: pointPulse 2s ease-in-out infinite;
+}
+
+@keyframes pointPulse {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.5);
+        opacity: 0.7;
+    }
+}
+
+/* Linha de escaneamento */
+.scanning-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, 
+        transparent 0%, 
+        #00ffff 10%, 
+        #00ffff 90%, 
+        transparent 100%);
+    animation: scanningLine 3s ease-in-out infinite;
+    opacity: 0.8;
+}
+
+@keyframes scanningLine {
+    0% { 
+        left: 0;
+        opacity: 0;
+    }
+    10% { 
+        opacity: 1;
+    }
+    90% { 
+        opacity: 1;
+    }
+    100% { 
+        left: 100%;
+        opacity: 0;
+    }
+}
+
+/* Informações da máscara */
+.mask-info {
+    font-size: 11px;
+    color: #00ffff;
+    text-align: center;
+    margin: 8px 0;
+    padding: 5px;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 4px;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Informações da imagem */
+.image-info {
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    margin: 5px 0;
+    padding: 3px 5px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Controles globais */
+.global-controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.global-btn {
+    padding: 8px 16px;
+    font-size: 11px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.global-btn.primary {
+    background: linear-gradient(135deg, #00ffff 0%, #0080ff 100%);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+}
+
+.global-btn.primary:hover {
+    background: linear-gradient(135deg, #00e6e6 0%, #0073e6 100%);
+    box-shadow: 0 6px 20px rgba(0, 255, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.global-btn.secondary {
+    background: linear-gradient(135deg, #333 0%, #555 100%);
+    color: #fff;
+    border: 1px solid #666;
+}
+
+.global-btn.secondary:hover {
+    background: linear-gradient(135deg, #444 0%, #666 100%);
+    border-color: #777;
+    transform: translateY(-1px);
+}
+
+/* Parâmetros faciais atualizados */
+.param-value {
+    color: #00ffff !important;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+/* Log entries para análise */
+.log-entry.system .message {
+    color: #00ffff;
+}
+
+.log-entry .timestamp {
+    color: #666;
+}
+
+.log-entry .type {
+    color: #00ff00;
+    font-weight: bold;
+}
+
+/* Código gerado */
+#generatedCode {
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: #00ffff !important;
+    border: 1px solid rgba(0, 255, 255, 0.3) !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+}
+
+/* Destaque para elementos ativos */
+.face-analyzer-panel.active {
+    border-color: #00ffff !important;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3) !important;
+}
+
+.code-generator-panel.active {
+    border-color: #00ff00 !important;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3) !important;
+}
+
+/* Efeitos de hover nos controles */
+.mask-controls button:hover,
+.image-controls button:hover {
+    background: linear-gradient(135deg, #00e6e6 0%, #0073e6 100%);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Mask container com efeitos */
+.mask-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.05) 0%, transparent 70%);
+}
+
+.mask-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #00ffff, #0080ff, #00ffff);
+    border-radius: 10px;
+    z-index: -1;
+    opacity: 0.3;
+    animation: borderGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes borderGlow {
+    0% { opacity: 0.3; }
+    100% { opacity: 0.6; }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .global-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .global-btn {
+        width: 100%;
+        padding: 10px;
+    }
+    
+    #clonedMaskCanvas {
+        width: 100%;
+        height: auto;
+    }
+}
