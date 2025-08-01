@@ -3,19 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANDROIDE VIRTUAL - Sistema de IA Avançada</title>
+    <title>ANDROIDE VIRTUAL - Sistema de IA Avançada v2.1</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2300ffff'/><text x='50' y='60' text-anchor='middle' font-size='35' fill='%23000'>AI</text></svg>">
-    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Interface avançada de IA com rosto 3D interativo e reconhecimento emocional">
+    <meta name="keywords" content="IA, Inteligência Artificial, 3D, Reconhecimento Facial, Gemini">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/grid-layout.css">
+    
+    <!-- Three.js e Bibliotecas 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/BloomPass.js"></script>
 </head>
 <body>
     <div class="viewport-container" id="mainInterface" style="display: none;">
-        <!-- Renderizador 3D Principal -->
+        <!-- Interface Principal Reorganizada -->
         <div class="main-display">
-            <div id="threejs-container"></div>
-            
+            <!-- Container Central do Rosto 3D -->
+        <div class="grid-container">
+            <div class="grid-item">
+                <div class="face-3d-section">
+                    <div class="face-3d-header">
+                        <h2 class="section-title">ANDROIDE NEURAL</h2>
+                        <div class="face-status">
+                            <span class="status-dot" id="faceStatusDot"></span>
+                            <span class="status-text" id="faceStatusText">INICIALIZANDO...</span>
+                        </div>
+                    </div>
+                    <div class="face-3d-container">
+                        <div id="threejs-container-main" class="main-3d-viewport"></div>
+                        <div class="face-overlays">
+                            <div class="tracking-points" id="trackingPoints">
+                                <div class="point eye-left" data-point="eye-left"></div>
+                                <div class="point eye-right" data-point="eye-right"></div>
+                                <div class="point nose" data-point="nose"></div>
+                                <div class="point mouth" data-point="mouth"></div>
+                            </div>
+                            <div class="emotion-indicators" id="emotionIndicators">
+                                <div class="emotion-bar">
+                                    <span class="emotion-label">FELICIDADE</span>
+                                    <div class="bar"><div class="fill" data-emotion="happiness"></div></div>
+                                </div>
+                                <div class="emotion-bar">
+                                    <span class="emotion-label">SURPRESA</span>
+                                    <div class="bar"><div class="fill" data-emotion="surprise"></div></div>
+                                </div>
+                                <div class="emotion-bar">
+                                    <span class="emotion-label">RAIVA</span>
+                                    <div class="bar"><div class="fill" data-emotion="anger"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-item">
+                <div class="side-panels">
+                    <div class="panel face-analyzer-panel">
+                        <div class="panel-title">ANALISADOR DE ROSTO 3D</div>
+                        <div class="face-analyzer-container">
+                            <!-- Box 1: Imagem Rosto 3D -->
+                            <div class="image-display-box">
+                                <div class="box-title">IMAGEM ROSTO 3D</div>
+                                <div class="image-container">
+                                    <img id="rosto3dImage" src="assets/rosto3d.png" alt="Rosto 3D" class="face-image">
+                                    <div class="image-overlay">
+                                        <div class="scanning-line"></div>
+                                        <div class="detection-points"></div>
+                                    </div>
+                                </div>
+                                <div class="image-info" id="imageInfo">Modelo: Rosto 3D | Status: Carregado</div>
+                                <div class="image-controls">
+                                    <button class="image-btn" id="analyzeImageBtn">ANALISAR IMAGEM</button>
+                                    <button class="image-btn" id="detectFeaturesBtn">DETECTAR CARACTERÍSTICAS</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Box 2: Máscara Clonada -->
+                            <div class="clone-mask-box">
+                                <div class="box-title">MÁSCARA FACIAL CLONADA</div>
+                                <div class="mask-container">
+                                    <canvas id="clonedMaskCanvas" width="250" height="200"></canvas>
+                                    <div class="mask-overlay">
+                                        <div class="neural-grid-overlay"></div>
+                                        <div class="processing-indicator" id="processingIndicator">
+                                            <div class="spinner"></div>
+                                            <span>Processando...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mask-info" id="maskInfo">Nenhuma máscara gerada</div>
+                                <div class="mask-controls">
+                                    <button class="mask-btn" id="generateMaskBtn">GERAR MÁSCARA</button>
+                                    <button class="mask-btn" id="cloneMaskBtn">CLONAR CARACTERÍSTICAS</button>
+                                    <button class="mask-btn" id="exportMaskBtn">EXPORTAR MÁSCARA</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Controles Globais -->
+                            <div class="global-controls">
+                                <button class="global-btn primary" id="startAnalysisBtn">INICIAR ANÁLISE COMPLETA</button>
+                                <button class="global-btn secondary" id="resetAnalysisBtn">RESETAR ANÁLISE</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel code-generator-panel">
+                        <div class="panel-title">GERADOR DE CÓDIGO</div>
+                        <div class="code-generator-container">
+                            <div class="code-display">
+                                <div class="code-header">
+                                    <span class="code-lang">JavaScript</span>
+                                    <button class="copy-btn" id="copyCodeBtn">COPIAR</button>
+                                </div>
+                                <pre id="generatedCode" class="code-output">// Código será gerado automaticamente
+// após análise do rosto 3D
+
+const emotionMask = {
+  neutral: { mouth: 0, eyes: 0.5, brows: 0 },
+  happy: { mouth: 0.8, eyes: 0.7, brows: 0.2 },
+  sad: { mouth: -0.6, eyes: 0.3, brows: -0.4 },
+  surprised: { mouth: 0.4, eyes: 0.9, brows: 0.6 },
+  angry: { mouth: -0.3, eyes: 0.2, brows: -0.8 }
+};</pre>
+                            </div>
+                            <div class="code-controls">
+                                <select id="codeLanguage" class="language-selector">
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="python">Python</option>
+                                    <option value="json">JSON</option>
+                                </select>
+                                <button class="export-btn" id="exportBtn">EXPORTAR</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
             <!-- Overlay de Interface -->
             <div class="ui-overlay">
                 <!-- HUD Superior -->
@@ -102,6 +230,13 @@
                                 <div class="btn-label">RESET</div>
                             </div>
                         </button>
+                        
+                        <button id="detectBtn" class="control-button detect">
+                            <div class="btn-content">
+                                <div class="btn-icon">🔍</div>
+                                <div class="btn-label">DETECTAR</div>
+                            </div>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -150,13 +285,32 @@
                     <label>Abertura da Boca:</label>
                     <div class="param-value" id="mouthOpening">0%</div>
                 </div>
-                <div class="param-group">
-                    <label>Intensidade Emocional:</label>
-                    <div class="param-value" id="emotionIntensity">50%</div>
+                    <div class="param-group">
+                        <label>Intensidade Emocional:</label>
+                        <div class="param-value" id="emotionIntensity">50%</div>
+                    </div>
+                </div>
+                
+                <!-- Box de Simulação de Chat -->
+                <div class="chat-simulation-box">
+                    <h4>SIMULAÇÃO DE CHAT</h4>
+                    <div class="chat-display" id="chatDisplay">
+                        <div class="chat-message user">
+                            <span class="chat-label">[USUÁRIO]</span>
+                            <span class="chat-text">Olá, androide!</span>
+                        </div>
+                        <div class="chat-message ai">
+                            <span class="chat-label">[ANDROIDE]</span>
+                            <span class="chat-text">Olá! Como posso assisti-lo hoje?</span>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Digite sua mensagem..." />
+                        <button id="sendChatBtn" class="chat-send-btn">ENVIAR</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     
     <!-- Advanced Splash Screen -->
     <div id="splashScreen" class="splash-screen">
@@ -176,6 +330,12 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Imagem Rosto 3D -->
+            <div class="face-3d-display">
+                <img src="assets/rosto3d.png" alt="Rosto 3D" class="face-3d-image" />
+                <div class="face-3d-label">MODELO FACIAL 3D</div>
             </div>
             
             <!-- Title and Subtitle -->
@@ -243,7 +403,10 @@
         </div>
     </div>
     
-    <script src="script.js"></script>
+    <!-- Scripts da aplicação -->
+    <script src="js/face3d.js"></script>
+    <script src="js/gemini-api.js"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
 

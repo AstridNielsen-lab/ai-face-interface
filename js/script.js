@@ -32,6 +32,26 @@ class UltraRealisticAndroidAI {
         this.currentEmotion = 'neutral';
         this.emotionValue = 0.5;
         
+        // Controle de pausa e detecção de silêncio
+        this.pauseDetectionEnabled = true;
+        this.silenceTimer = null;
+        this.silenceThreshold = 2000; // 2 segundos de silêncio
+        this.lastSpeechTime = 0;
+        this.interimText = '';
+        this.autoRestartEnabled = false;
+        
+        // Controle de conversação
+        this.userName = null;
+        this.conversationStarted = false;
+        this.waitingForResponse = false;
+        this.isInitialized = false;
+        this.askedForName = false;
+        
+        // ASCII Face
+        this.faceDisplay = null;
+        this.asciiFace = null;
+        this.currentFaceState = 'neutral';
+        
         // Three.js components
         this.scene = null;
         this.camera = null;
@@ -63,6 +83,8 @@ class UltraRealisticAndroidAI {
         this.initializeLoadingSequence();
         this.initializeVoiceRecognition();
         this.setupEventListeners();
+        this.initializeThreeJS();
+        this.initializeASCIIFace();
         this.startAnimation();
         this.greetUser();
     }
@@ -293,6 +315,78 @@ class UltraRealisticAndroidAI {
         this.ctx.textAlign = 'center';
         this.ctx.fillText('😊', this.canvasWidth / 2, this.canvasHeight / 2 + 20);
     }
+
+    updateTracedMaskEmotion(emotion) {
+        const maskCanvas = document.getElementById('tracedMaskCanvas');
+        if (!maskCanvas) return;
+
+        const ctx = maskCanvas.getContext('2d');
+        ctx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+        
+        // Atualizar classe CSS da máscara
+        const maskContainer = document.querySelector('.traced-mask-container');
+        if (maskContainer) {
+            maskContainer.className = 'traced-mask-container';
+            maskContainer.classList.add(emotion);
+        }
+
+        const traceImage = new Image();
+        traceImage.src = 'rosto3d_traces.png';
+        traceImage.onload = () => {
+            ctx.drawImage(traceImage, 0, 0, maskCanvas.width, maskCanvas.height);
+
+            ctx.fillStyle = this.getEmotionColor(emotion);
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            ctx.globalCompositeOperation = 'source-over';
+        };
+    }
+
+    getEmotionColor(emotion) {
+        switch (emotion) {
+            case 'happy':
+                return 'rgba(255, 223, 0, 0.7)'; // Amarelo
+            case 'sad':
+                return 'rgba(0, 128, 255, 0.7)'; // Azul
+            case 'angry':
+                return 'rgba(255, 0, 0, 0.7)'; // Vermelho
+            case 'surprised':
+                return 'rgba(255, 255, 255, 0.7)'; // Branco
+            case 'neutral':
+                return 'rgba(0, 255, 255, 0.7)'; // Ciano
+            default:
+                return 'rgba(128, 128, 128, 0.7)'; // Cinza 
+        }
+    }
+
+    expressEmotion(text) {
+    
+        const lowerText = text.toLowerCase();
+        let detectedEmotion = 'neutral';
+
+        if (lowerText.includes('feliz') || lowerText.includes('alegre')) {
+            detectedEmotion = 'happy';
+        } else if (lowerText.includes('triste') || lowerText.includes('chateado')) {
+            detectedEmotion = 'sad';
+        } else if (lowerText.includes('raiva') || lowerText.includes('irritado')) {
+            detectedEmotion = 'angry';
+        } else if (lowerText.includes('surpresa') || lowerText.includes('incrível')) {
+            detectedEmotion = 'surprised';
+        }
+
+        this.updateTracedMaskEmotion(detectedEmotion);
+
+        if (this.asciiFace) {
+            this.asciiFace.classList.remove('happy', 'sad', 'angry', 'surprised');
+            this.asciiFace.classList.add(detectedEmotion);
+        }
+
+        if (this.aiFace) {
+            this.aiFace.classList.remove('happy', 'sad', 'angry', 'surprised');
+            this.aiFace.classList.add(detectedEmotion);
+            setTimeout(() => this.aiFace.classList.remove(detectedEmotion), 3000);
+        }
+    }
     
     drawSurprisedState() {
         // Explosão de surpresa
@@ -491,15 +585,32 @@ class UltraRealisticAndroidAI {
             
             this.recognition.onresult = (event) => {
                 let finalTranscript = '';
+                let interimTranscript = '';
                 
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     if (event.results[i].isFinal) {
                         finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
                     }
                 }
                 
+                // Atualizar texto interim e resetar timer de silêncio
+                if (interimTranscript || finalTranscript) {
+                    this.interimText = interimTranscript;
+                    this.lastSpeechTime = Date.now();
+                    this.resetSilenceTimer();
+                }
+                
+                // Processar texto final imediatamente
                 if (finalTranscript.trim()) {
                     this.processUserInput(finalTranscript.trim());
+                    return;
+                }
+                
+                // Iniciar detecção de pausa para texto interim
+                if (interimTranscript.trim() && this.pauseDetectionEnabled) {
+                    this.startSilenceDetection();
                 }
             };
             
@@ -517,6 +628,14 @@ class UltraRealisticAndroidAI {
             alert('Seu navegador não suporta reconhecimento de voz. Use Chrome, Edge ou Firefox.');
         }
     }
+
+    async doInitialGreeting() {
+        const greetingMessage = "Olá! Eu sou sua assistente de IA. Qual é o seu nome?";
+        this.addMessage(greetingMessage, 'ai');
+        await this.speakResponse(greetingMessage);
+        this.waitingForResponse = true;
+        this.setListening(true);
+    }
     
     setupEventListeners() {
         if (this.startBtn) {
@@ -527,6 +646,9 @@ class UltraRealisticAndroidAI {
         }
         if (this.resetBtn) {
             this.resetBtn.addEventListener('click', () => this.resetSystem());
+        }
+        if (document.getElementById('detectBtn')) {
+            document.getElementById('detectBtn').addEventListener('click', () => this.demonstrateContourDetection());
         }
         
         // Controles de expressão
@@ -539,11 +661,20 @@ class UltraRealisticAndroidAI {
         });
     }
     
-    startListening() {
+    async startListening() {
         if (this.recognition && !this.isListening) {
-            this.recognition.start();
-            this.startBtn.disabled = true;
-            this.stopBtn.disabled = false;
+            // Primeira vez que inicia - fazer apresentação
+            if (!this.conversationStarted) {
+                this.conversationStarted = true;
+                await this.doInitialGreeting();
+            }
+            
+            // Parar reconhecimento de voz durante a fala da IA
+            if (!this.isSpeaking) {
+                this.recognition.start();
+                this.startBtn.disabled = true;
+                this.stopBtn.disabled = false;
+            }
         }
     }
     
@@ -584,6 +715,9 @@ class UltraRealisticAndroidAI {
         } else {
             this.currentExpression = 'idle';
         }
+        
+        // Atualizar face ASCII
+        this.updateASCIIFace();
     }
     
     updateIndicators() {
@@ -622,12 +756,18 @@ class UltraRealisticAndroidAI {
             await this.speakResponse(errorMessage);
         }
         
-        // Reiniciar escuta após um pequeno delay
-        setTimeout(() => {
-            if (!this.isListening && this.startBtn.disabled) {
-                this.startListening();
-            }
-        }, 1000);
+        // Limpar texto interim após processamento
+        this.interimText = '';
+        this.resetSilenceTimer();
+        
+        // Reiniciar escuta após um pequeno delay se autoRestart estiver habilitado
+        if (this.autoRestartEnabled) {
+            setTimeout(() => {
+                if (!this.isListening && this.startBtn.disabled) {
+                    this.startListening();
+                }
+            }, 1000);
+        }
     }
     
     async callGeminiAPI(userText) {
@@ -665,6 +805,153 @@ class UltraRealisticAndroidAI {
         }
     }
     
+    runContourDetection(imagePath) {
+        // Use um caminho de imagem de exemplo como 'assets/input_image.jpg'
+        let image = new Image();
+        image.src = imagePath;
+
+        image.onload = function() {
+            // Crie um elemento de canvas
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            // Limpar canvas com fundo preto (apenas traços serão visíveis)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Canvas temporário para processamento
+            let tempCanvas = document.createElement('canvas');
+            let tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = image.width;
+            tempCanvas.height = image.height;
+
+            // Desenhe a imagem no canvas temporário
+            tempCtx.drawImage(image, 0, 0);
+
+            // Obtenha os dados da imagem
+            let imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            let data = imageData.data;
+
+            // Converta para escala de cinza
+            for (let i = 0; i < data.length; i += 4) {
+                let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = data[i + 1] = data[i + 2] = avg;
+            }
+
+            // Detectar contornos usando edge detection
+            let grayData = new Array(tempCanvas.width * tempCanvas.height);
+            for (let i = 0; i < data.length; i += 4) {
+                grayData[i / 4] = data[i];
+            }
+
+            // Aplicar filtro Sobel para detecção de bordas mais precisa
+            let edges = [];
+            for (let y = 1; y < tempCanvas.height - 1; y++) {
+                for (let x = 1; x < tempCanvas.width - 1; x++) {
+                    let idx = y * tempCanvas.width + x;
+                    
+                    // Filtro Sobel X
+                    let sobelX = (
+                        -1 * grayData[idx - tempCanvas.width - 1] + 1 * grayData[idx - tempCanvas.width + 1] +
+                        -2 * grayData[idx - 1] + 2 * grayData[idx + 1] +
+                        -1 * grayData[idx + tempCanvas.width - 1] + 1 * grayData[idx + tempCanvas.width + 1]
+                    );
+                    
+                    // Filtro Sobel Y
+                    let sobelY = (
+                        -1 * grayData[idx - tempCanvas.width - 1] + -2 * grayData[idx - tempCanvas.width] + -1 * grayData[idx - tempCanvas.width + 1] +
+                        1 * grayData[idx + tempCanvas.width - 1] + 2 * grayData[idx + tempCanvas.width] + 1 * grayData[idx + tempCanvas.width + 1]
+                    );
+                    
+                    let magnitude = Math.sqrt(sobelX * sobelX + sobelY * sobelY);
+                    
+                    if (magnitude > 30) { // Threshold para detecção de borda
+                        edges.push({x: x, y: y, intensity: Math.min(magnitude / 100, 1)});
+                    }
+                }
+            }
+
+            // Desenhar APENAS os contornos detectados (sem imagem original)
+            edges.forEach(point => {
+                // Cor baseada na intensidade da borda
+                let alpha = point.intensity;
+                ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                ctx.fillRect(point.x, point.y, 1, 1);
+            });
+
+            // Adicionar efeito de brilho nos traços
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 2;
+            edges.forEach(point => {
+                if (point.intensity > 0.7) { // Apenas bordas mais fortes
+                    ctx.fillStyle = `rgba(255, 255, 255, ${point.intensity * 0.5})`;
+                    ctx.fillRect(point.x, point.y, 1, 1);
+                }
+            });
+            ctx.shadowBlur = 0;
+
+            // Estilizar o canvas para a interface
+            canvas.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                border: 2px solid #00ffff;
+                border-radius: 10px;
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);
+                background: #000;
+                z-index: 1000;
+                max-width: 80vw;
+                max-height: 80vh;
+            `;
+
+            // Adicionar título
+            let title = document.createElement('div');
+            title.textContent = 'DETECÇÃO DE CONTORNOS';
+            title.style.cssText = `
+                position: absolute;
+                top: -40px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #00ffff;
+                font-family: 'Orbitron', monospace;
+                font-size: 14px;
+                font-weight: bold;
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+                white-space: nowrap;
+            `;
+
+            // Adicionar botão de fechar
+            let closeBtn = document.createElement('button');
+            closeBtn.textContent = '❌';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: -15px;
+                right: -15px;
+                background: #ff3366;
+                border: none;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                color: white;
+                cursor: pointer;
+                z-index: 1001;
+                font-size: 12px;
+                box-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+            `;
+            closeBtn.onclick = () => {
+                document.body.removeChild(canvas);
+            };
+
+            // Anexar elementos à interface
+            document.body.appendChild(canvas);
+            canvas.appendChild(title);
+            canvas.appendChild(closeBtn);
+        };
+    }
+
     async speakResponse(text) {
         return new Promise((resolve) => {
             this.setSpeaking(true);
@@ -702,7 +989,29 @@ class UltraRealisticAndroidAI {
             this.synthesis.speak(utterance);
         });
     }
-    
+
+    // Iniciar detecção de silêncio
+    startSilenceDetection() {
+        this.resetSilenceTimer();
+        this.silenceTimer = setInterval(() => {
+            if (Date.now() - this.lastSpeechTime > this.silenceThreshold) {
+                clearInterval(this.silenceTimer);
+                this.silenceTimer = null;
+
+                if (this.interimText.trim()) {
+                    this.processUserInput(this.interimText.trim());
+                }
+            }
+        }, 100);
+    }
+
+    resetSilenceTimer() {
+        if (this.silenceTimer) {
+            clearInterval(this.silenceTimer);
+            this.silenceTimer = null;
+        }
+    }
+
     startSpeechVibrations() {
         this.vibrationInterval = setInterval(() => {
             const intensity = 0.3 + Math.random() * 0.7; // Intensidade entre 0.3 e 1.0
@@ -805,12 +1114,8 @@ class UltraRealisticAndroidAI {
     }
     
     async greetUser() {
-        setTimeout(async () => {
-            const greeting = "Olá! Sou sua assistente IA interativa. Estou aqui para conversar com você!";
-            this.addMessage(greeting, 'ai');
-            await this.speakResponse(greeting);
-            this.setEmotion('happy');
-        }, 2000);
+        // Não fazer saudação automática, apenas marcar como inicializado
+        this.isInitialized = true;
     }
     
     setEmotion(emotion) {
@@ -873,6 +1178,298 @@ class UltraRealisticAndroidAI {
         this.updateIndicators();
         
         console.log('Sistema reiniciado');
+    }
+
+    // Função para demonstrar detecção de contornos
+    demonstrateContourDetection() {
+        // Criar uma imagem de exemplo para demonstração
+        this.createSampleImageForDetection();
+    }
+
+    // Criar uma imagem de exemplo para detecção
+    createSampleImageForDetection() {
+        // Criar um canvas temporário com formas geométricas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 400;
+        canvas.height = 300;
+
+        // Fundo escuro
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Desenhar algumas formas para demonstração
+        ctx.fillStyle = '#fff';
+        
+        // Círculo
+        ctx.beginPath();
+        ctx.arc(100, 100, 40, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Retângulo
+        ctx.fillRect(200, 80, 80, 60);
+
+        // Triângulo
+        ctx.beginPath();
+        ctx.moveTo(150, 200);
+        ctx.lineTo(200, 250);
+        ctx.lineTo(100, 250);
+        ctx.closePath();
+        ctx.fill();
+
+        // Elipse
+        ctx.beginPath();
+        ctx.ellipse(320, 180, 50, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Converter canvas para data URL e usar na detecção
+        const dataURL = canvas.toDataURL();
+        this.runContourDetection(dataURL);
+    }
+
+    // Inicializar Three.js (função que estava faltando)
+    initializeThreeJS() {
+        if (!this.container) {
+            console.warn('Container Three.js não encontrado');
+            return;
+        }
+
+        // Criar cena
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x000000);
+
+        // Criar câmera
+        this.camera = new THREE.PerspectiveCamera(
+            75,
+            this.container.clientWidth / this.container.clientHeight,
+            0.1,
+            1000
+        );
+        this.camera.position.z = 5;
+
+        // Criar renderer
+        try {
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            this.container.appendChild(this.renderer.domElement);
+        } catch (error) {
+            console.warn('WebGL não suportado, usando fallback:', error);
+            this.initializeCanvasFallback();
+            return;
+        }
+
+        // Adicionar luzes
+        this.setupLights();
+
+        // Criar geometria básica para o rosto
+        this.createBasicFace();
+
+        // Iniciar loop de renderização
+        this.startRenderLoop();
+    }
+
+    // Fallback para canvas quando WebGL não está disponível
+    initializeCanvasFallback() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.container.clientWidth;
+        canvas.height = this.container.clientHeight;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        this.container.appendChild(canvas);
+        
+        this.ctx = canvas.getContext('2d');
+        this.canvasWidth = canvas.width;
+        this.canvasHeight = canvas.height;
+        
+        this.initializeCanvas();
+    }
+
+    // Configurar luzes para Three.js
+    setupLights() {
+        // Luz ambiente
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        this.scene.add(ambientLight);
+
+        // Luz direcional principal
+        const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+        directionalLight.position.set(2, 2, 5);
+        directionalLight.castShadow = true;
+        this.scene.add(directionalLight);
+
+        // Luz de preenchimento
+        const fillLight = new THREE.DirectionalLight(0xff00ff, 0.3);
+        fillLight.position.set(-2, -1, 3);
+        this.scene.add(fillLight);
+
+        this.lights = [ambientLight, directionalLight, fillLight];
+    }
+
+    // Criar geometria básica do rosto
+    createBasicFace() {
+        // Grupo para o rosto
+        this.androidHead = new THREE.Group();
+
+        // Cabeça principal
+        const headGeometry = new THREE.SphereGeometry(1.2, 32, 32);
+        const headMaterial = new THREE.MeshPhongMaterial({
+            color: 0x333333,
+            shininess: 30,
+            transparent: true,
+            opacity: 0.8
+        });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        this.androidHead.add(head);
+
+        // Olhos
+        const eyeGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const eyeMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ffff,
+            emissive: 0x004444
+        });
+
+        this.leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        this.leftEye.position.set(-0.3, 0.2, 1.0);
+        this.androidHead.add(this.leftEye);
+
+        this.rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        this.rightEye.position.set(0.3, 0.2, 1.0);
+        this.androidHead.add(this.rightEye);
+
+        // Boca
+        const mouthGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
+        const mouthMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff3366,
+            emissive: 0x441122
+        });
+        this.mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+        this.mouth.position.set(0, -0.4, 0.9);
+        this.mouth.rotation.x = Math.PI / 2;
+        this.androidHead.add(this.mouth);
+
+        this.scene.add(this.androidHead);
+    }
+
+    // Iniciar loop de renderização
+    startRenderLoop() {
+        const animate = () => {
+            requestAnimationFrame(animate);
+            this.updateFaceAnimation();
+            this.renderer.render(this.scene, this.camera);
+        };
+        animate();
+    }
+
+    // Atualizar animação do rosto
+    updateFaceAnimation() {
+        if (!this.androidHead) return;
+
+        const time = Date.now() * 0.001;
+
+        // Respiração suave
+        this.androidHead.scale.setScalar(1 + Math.sin(time * 0.5) * 0.02);
+
+        // Rotação suave baseada no estado
+        if (this.currentExpression === 'listening') {
+            this.androidHead.rotation.y = Math.sin(time * 2) * 0.1;
+        } else if (this.currentExpression === 'thinking') {
+            this.androidHead.rotation.x = Math.sin(time * 1.5) * 0.05;
+            this.androidHead.rotation.y = Math.cos(time * 1.2) * 0.08;
+        } else {
+            this.androidHead.rotation.x = Math.sin(time * 0.3) * 0.02;
+            this.androidHead.rotation.y = Math.cos(time * 0.4) * 0.03;
+        }
+
+        // Animação dos olhos
+        if (this.leftEye && this.rightEye) {
+            const eyeGlow = 0.5 + Math.sin(time * 3) * 0.3;
+            this.leftEye.material.emissive.setHex(0x004444 * eyeGlow);
+            this.rightEye.material.emissive.setHex(0x004444 * eyeGlow);
+        }
+
+        // Animação da boca baseada no estado
+        if (this.mouth) {
+            if (this.currentExpression === 'speaking') {
+                this.mouth.scale.y = 1 + Math.sin(time * 10) * 0.3;
+                this.mouth.material.emissive.setHex(0x441122 * (1 + Math.sin(time * 8) * 0.5));
+            } else {
+                this.mouth.scale.y = 1;
+                this.mouth.material.emissive.setHex(0x441122);
+            }
+        }
+    }
+
+    // Inicializar face ASCII (função que estava faltando)
+    initializeASCIIFace() {
+        this.faceDisplay = document.getElementById('faceDisplay');
+        this.asciiFace = document.getElementById('asciiFace');
+        
+        if (this.faceDisplay) {
+            this.updateASCIIFace();
+        }
+    }
+
+    // Atualizar face ASCII
+    updateASCIIFace() {
+        if (!this.faceDisplay) return;
+
+        const faces = {
+            idle: `
+    ╭─────────────────────╮
+    │  ◉               ◉  │
+    │                     │
+    │         ___         │
+    │        (   )        │
+    │         \_/         │
+    ╰─────────────────────╯
+            `,
+            listening: `
+    ╭─────────────────────╮
+    │  ◕               ◕  │
+    │                     │
+    │         ___         │
+    │        ( ○ )        │
+    │         \_/         │
+    ╰─────────────────────╯
+            `,
+            thinking: `
+    ╭─────────────────────╮
+    │  ◔               ◔  │
+    │                     │
+    │         ___         │
+    │        ( ~ )        │
+    │         \_/         │
+    ╰─────────────────────╯
+            `,
+            speaking: `
+    ╭─────────────────────╮
+    │  ◉               ◉  │
+    │                     │
+    │         ___         │
+    │        ( ◇ )        │
+    │         \_/         │
+    ╰─────────────────────╯
+            `,
+            happy: `
+    ╭─────────────────────╮
+    │  ◉               ◉  │
+    │                     │
+    │         ___         │
+    │        ( ◡ )        │
+    │         \_/         │
+    ╰─────────────────────╯
+            `
+        };
+
+        const currentFace = faces[this.currentExpression] || faces.idle;
+        this.faceDisplay.textContent = currentFace;
+        
+        // Atualizar classes CSS para animações
+        if (this.asciiFace) {
+            this.asciiFace.className = 'ascii-face';
+            this.asciiFace.classList.add(this.currentExpression);
+        }
     }
 }
 
